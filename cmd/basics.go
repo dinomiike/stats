@@ -3,18 +3,27 @@ package cmd
 import (
 	"strconv"
 
+	"github.com/fatih/color"
 	"github.com/spf13/cobra"
 )
 
 var meanCmd = &cobra.Command{
 	Use:   "mean",
 	Short: "The average of a set of numbers",
-	Long: `The mean is the average of a set of numbers. It is calculated by
-	adding all the numbers together and dividing by the number of numbers.
+	Long: `The mean is the average of a set of numbers. It is calculated by adding all the numbers together and dividing by the number of numbers.
 	
-	For example, the mean of 1, 2, 3, 4, and 5 is (1 + 2 + 3 + 4 + 5) / 5 = 3.`,
+	For example, the mean of 1, 2, 3, 4, 5 is (1 + 2 + 3 + 4 + 5) / 5 = 3.
+	
+	To use this command, provide a set of numbers as arguments. For example:
+	$ stats mean 1 2 3 4 5`,
 	Run: mean,
 }
+
+var (
+	successCopy = color.New(color.FgGreen, color.Bold).SprintFunc()
+	errorCopy   = color.New(color.FgRed, color.Bold).SprintFunc()
+	warnCopy    = color.New(color.FgYellow).SprintFunc()
+)
 
 func init() {
 	rootCmd.AddCommand(meanCmd)
@@ -23,7 +32,7 @@ func init() {
 func mean(cmd *cobra.Command, args []string) {
 	if len(args) == 0 {
 		cmd.Help()
-		cmd.Println("Please provide a set of numbers.")
+		cmd.Printf("%s\n", errorCopy("Please provide a set of numbers."))
 		return
 	}
 
@@ -42,5 +51,5 @@ func mean(cmd *cobra.Command, args []string) {
 		sum += num
 	}
 	mean := sum / float64(len(numbers))
-	cmd.Printf("Result: %f\n", mean)
+	cmd.Printf("%s %f\n", successCopy("Result:"), mean)
 }
