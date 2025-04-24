@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"math"
+	"sort"
 	"strconv"
 
 	"github.com/fatih/color"
@@ -20,6 +21,19 @@ var meanCmd = &cobra.Command{
 	Run: mean,
 }
 
+var medianCmd = &cobra.Command{
+	Use:   "median",
+	Short: "The median of a set of numbers",
+	Long: `The median is the middle number in a set of numbers. It is calculated by sorting the numbers and finding the middle number.
+	If there is an even number of numbers, the median is the average of the two middle numbers.
+	
+	For example, the median of 1, 2, 3, 4, 5 is 3. The median of 1, 2, 3, 4 is (2 + 3) / 2 = 2.5.
+	
+	To use this command, provide a set of numbers as arguments. For example:
+	$ stats median 1 2 3 4 5`,
+	Run: median,
+}
+
 var (
 	successCopy = color.New(color.FgGreen, color.Bold).SprintFunc()
 	errorCopy   = color.New(color.FgRed, color.Bold).SprintFunc()
@@ -29,10 +43,13 @@ var (
 
 func init() {
 	rootCmd.AddCommand(meanCmd)
+	rootCmd.AddCommand(medianCmd)
 
 	meanCmd.Flags().BoolP("verbose", "v", false, "Enable verbose mode")
+	medianCmd.Flags().BoolP("verbose", "v", false, "Enable verbose mode")
 }
 
+// implementation of the mean command
 func mean(cmd *cobra.Command, args []string) {
 	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
@@ -79,4 +96,60 @@ func mean(cmd *cobra.Command, args []string) {
 	cmd.Printf("%s %f (%.2f)\n", successCopy("Result:"), mean, math.Floor(mean*100)/100)
 }
 
-// func median(cmd *cobra.Command, args []string) {}
+// implementation of the median command
+func median(cmd *cobra.Command, args []string) {
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		cmd.Printf("%s\n", errorCopy("Error parsing verbose flag."))
+		return
+	}
+
+	if verbose {
+		cmd.Printf("%s\n", warnCopy("Verbose mode is enabled. Calculating median..."))
+	}
+
+	if len(args) == 0 {
+		cmd.Help()
+		cmd.Printf("%s\n", errorCopy("Please provide a set of numbers."))
+		return
+	}
+
+	var numbers []float64
+	for _, arg := range args {
+		num, err := strconv.ParseFloat(arg, 64)
+		if err != nil {
+			cmd.Printf("%s %s\n", errorCopy("Invalid number:"), arg)
+			return
+		}
+		numbers = append(numbers, num)
+	}
+
+	if verbose {
+		cmd.Printf("%s %v\n", generalCopy("Calculating median for numbers:"), numbers)
+	}
+
+	// sort numbers in ascending order
+	sort.Float64s(numbers)
+
+	if verbose {
+		cmd.Printf("%s %v\n", generalCopy("Sorted numbers:"), numbers)
+	}
+
+	var median float64
+	if len(numbers)%2 == 0 {
+		// middle is middle average of the 2 numbers in the middle
+		firstMiddleIndex := (len(numbers) / 2) - 1
+		secondMiddleIndex := len(numbers) / 2
+		if verbose {
+			cmd.Printf("%s %f + %f / 2\n", warnCopy("Because of an even number of values, the median is calculated as:"), numbers[firstMiddleIndex], numbers[secondMiddleIndex])
+		}
+		median = (numbers[firstMiddleIndex] + numbers[secondMiddleIndex]) / 2
+	} else {
+		if verbose {
+			cmd.Printf("%s %f\n", generalCopy("Median is the middle number:"), numbers[len(numbers)/2])
+		}
+		median = numbers[len(numbers)/2]
+	}
+
+	cmd.Printf("%s %f (%.2f)\n", successCopy("Result:"), median, math.Floor(median*100)/100)
+}
