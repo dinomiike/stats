@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"math"
 	"strconv"
 
 	"github.com/fatih/color"
@@ -22,14 +23,27 @@ var meanCmd = &cobra.Command{
 var (
 	successCopy = color.New(color.FgGreen, color.Bold).SprintFunc()
 	errorCopy   = color.New(color.FgRed, color.Bold).SprintFunc()
-	warnCopy    = color.New(color.FgYellow).SprintFunc()
+	warnCopy    = color.New(color.FgYellow, color.Bold).SprintFunc()
+	generalCopy = color.New(color.FgWhite).SprintFunc()
 )
 
 func init() {
 	rootCmd.AddCommand(meanCmd)
+
+	meanCmd.Flags().BoolP("verbose", "v", false, "Enable verbose mode")
 }
 
 func mean(cmd *cobra.Command, args []string) {
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		cmd.Printf("%s\n", errorCopy("Error parsing verbose flag."))
+		return
+	}
+
+	if verbose {
+		cmd.Printf("%s\n", warnCopy("Verbose mode is enabled. Calculating mean..."))
+	}
+
 	if len(args) == 0 {
 		cmd.Help()
 		cmd.Printf("%s\n", errorCopy("Please provide a set of numbers."))
@@ -46,10 +60,23 @@ func mean(cmd *cobra.Command, args []string) {
 		numbers = append(numbers, num)
 	}
 
+	if verbose {
+		cmd.Printf("%s %v\n", generalCopy("Calculating mean for numbers:"), numbers)
+	}
+
 	sum := 0.0
 	for _, num := range numbers {
 		sum += num
 	}
 	mean := sum / float64(len(numbers))
-	cmd.Printf("%s %f\n", successCopy("Result:"), mean)
+
+	if verbose {
+		cmd.Printf("%s %f\n", generalCopy("Sum of numbers:"), sum)
+		cmd.Printf("%s %d\n", generalCopy("Count of numbers:"), len(numbers))
+		cmd.Printf("%s %f / %d\n", generalCopy("Mean is calculated as sum / count:"), sum, len(numbers))
+	}
+
+	cmd.Printf("%s %f (%.2f)\n", successCopy("Result:"), mean, math.Floor(mean*100)/100)
 }
+
+// func median(cmd *cobra.Command, args []string) {}
