@@ -23,7 +23,7 @@ var meanCmd = &cobra.Command{
 
 var medianCmd = &cobra.Command{
 	Use:   "median",
-	Short: "The median of a set of numbers",
+	Short: "The median or middle number of a sorted set of input",
 	Long: `The median is the middle number in a set of numbers. It is calculated by sorting the numbers and finding the middle number.
 	If there is an even number of numbers, the median is the average of the two middle numbers.
 	
@@ -32,6 +32,19 @@ var medianCmd = &cobra.Command{
 	To use this command, provide a set of numbers as arguments. For example:
 	$ stats median 1 2 3 4 5`,
 	Run: median,
+}
+
+var modeCmd = &cobra.Command{
+	Use:   "mode",
+	Short: "The mode is the most common number in the set",
+	Long: `The mode is the most common number in the set of numbers. If there are no repeat numbers, the result is "no mode."
+	
+	For example, the mode of 1, 2, 3, 2, 5, 6, 2, 8 is 2.
+	The mode of 1, 2, 3, 4, 5 is no mode.
+	
+	To use this command, provide a set of numbers as arguments. For example:
+	$ stats mode 1 2 3 4 5 3`,
+	Run: mode,
 }
 
 var (
@@ -44,9 +57,11 @@ var (
 func init() {
 	rootCmd.AddCommand(meanCmd)
 	rootCmd.AddCommand(medianCmd)
+	rootCmd.AddCommand(modeCmd)
 
 	meanCmd.Flags().BoolP("verbose", "v", false, "Enable verbose mode")
 	medianCmd.Flags().BoolP("verbose", "v", false, "Enable verbose mode")
+	modeCmd.Flags().BoolP("verbose", "v", false, "Enable verbose mode")
 }
 
 // implementation of the mean command
@@ -152,4 +167,78 @@ func median(cmd *cobra.Command, args []string) {
 	}
 
 	cmd.Printf("%s %f (%.2f)\n", successCopy("Result:"), median, math.Floor(median*100)/100)
+}
+
+// implementation of the mode command
+func mode(cmd *cobra.Command, args []string) {
+	verbose, err := cmd.Flags().GetBool("verbose")
+	if err != nil {
+		cmd.Printf("%s\n", errorCopy("Error parsing verbose flag."))
+		return
+	}
+
+	if verbose {
+		cmd.Printf("%s\n", warnCopy("Verbose mode is enabled. Calculating median..."))
+	}
+
+	if len(args) == 0 {
+		cmd.Help()
+		cmd.Printf("%s\n", errorCopy("Please provide a set of numbers."))
+		return
+	}
+
+	// store the frequency of each number
+	frequency := make(map[string]int)
+
+	// group numbers by frequency to test for bimodal and multimodal outcomes
+	var frequencyGroup [][]string
+
+	// count the occurrences of each number
+	for _, arg := range args {
+		if _, err := strconv.ParseFloat(arg, 64); err != nil {
+			cmd.Printf("%s\n", errorCopy("Invalid number:", arg))
+			return
+		}
+		// increment the frequency of this number by 1
+		frequency[arg]++
+		// get the frequency of this number
+		currentFrequency := frequency[arg]
+		// note that this implies a 0 occurrence can't happen
+		// i prefer this because it makes counting the length of the frequencyGroup more accurate, without having 0 index as an issue
+
+		// Ensure the slice at the current frequency index is initialized
+		if currentFrequency >= len(frequencyGroup) {
+			// Extend the slice to accommodate the current frequency index
+			newGroup := make([][]string, currentFrequency+1)
+			copy(newGroup, frequencyGroup)
+			frequencyGroup = newGroup
+		}
+		frequencyGroup[currentFrequency] = append(frequencyGroup[currentFrequency], arg)
+	}
+
+	cmd.Printf("frequencyGroup: %v\n", frequencyGroup)
+
+	// check for no mode
+	// the 0 index represents numbers in the list that don't appear -- always empty
+	// the 1 index represents numbers that appear only one time
+	// therefore, if your length is 2, there are no repeated numbers
+	if len(frequencyGroup) == 2 {
+		cmd.Printf("%s\n", warnCopy("Result: no mode"))
+		return
+	}
+
+	lastSet := frequencyGroup[len(frequencyGroup)-1]
+	// check for bimodal by getting the number of scores in the last set of the frequencyGroup
+	if len(lastSet) == 2 {
+		cmd.Printf("%s %v\n", successCopy("Result: bimodal:"), lastSet)
+		return
+	}
+
+	// check for multimodal in the same way as bimodal, except it's anything more than 2
+	if len(lastSet) > 2 {
+		cmd.Printf("%s %v\n", successCopy("Result: multimodal:"), lastSet)
+		return
+	}
+
+	cmd.Printf("%s %s\n", successCopy("Result:"), lastSet[0])
 }
